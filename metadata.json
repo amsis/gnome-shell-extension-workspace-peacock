@@ -1,0 +1,9 @@
+{
+  "uuid": "workspace-peacock@amsis.github.io",
+  "name": "Workspace Peacock",
+  "description": "Gives the top bar a different color on each workspace, so you can tell at a glance which one you are on. The workspace dots of the Activities button and of the workspace switcher popup, and the workspace thumbnails of the overview, show the colors too.\n\nColors are chosen in the settings window, or with gsettings, and apply immediately.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "url": "https://github.com/amsis/gnome-shell-extension-workspace-peacock",
+  "settings-schema": "org.gnome.shell.extensions.workspace-peacock",
+  "version-name": "0.1.0"
+}
