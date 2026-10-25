@@ -1,5 +1,7 @@
 # Workspace Peacock
 
+<img src="docs/icon.png" width="96" align="right" alt="Workspace Peacock icon">
+
 Workspace Peacock is [Peacock](https://marketplace.visualstudio.com/items?itemName=johnpapa.vscode-peacock)
 for GNOME Shell workspaces: the top bar takes a different color on each workspace,
 so a glance is enough to know where you are.
