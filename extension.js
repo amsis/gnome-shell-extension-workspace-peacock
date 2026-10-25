@@ -82,6 +82,14 @@ export default class WorkspacePeacockExtension extends Extension {
             'workspace-removed', () => this._applyColor(),
             'workspaces-reordered', () => this._applyColor(),
             this);
+        // The overview uses the bar's inline style for its own transitions and
+        // clears it when done (Main.panel.style = null in ui/overview.js, in
+        // every version from 45 to 50), wiping the color: put it back. Only an
+        // empty style is refilled, so this never loops.
+        Main.panel.connectObject('notify::style', () => {
+            if (Main.panel.get_style() === null && this._activeColor())
+                this._applyColor();
+        }, this);
         // A new workspace gets a new, uncolored dot.
         this._indicators?.connectObject(
             childAddedSignal(this._indicators), () => this._applyColor(),
@@ -117,6 +125,7 @@ export default class WorkspacePeacockExtension extends Extension {
         global.workspace_manager.disconnectObject(this);
         this._indicators?.disconnectObject(this);
         this._thumbnailsBox?.disconnectObject(this);
+        Main.panel.disconnectObject(this);
         Main.panel.set_style(this._originalStyle);
         // The shell itself never sets an inline style on dots or thumbnails.
         this._getDots().forEach(dot => dot.set_style(null));
@@ -164,9 +173,13 @@ export default class WorkspacePeacockExtension extends Extension {
         this._applyColor();
     }
 
+    _activeColor() {
+        return this._colors[global.workspace_manager.get_active_workspace_index()];
+    }
+
     _applyColor() {
         const active = global.workspace_manager.get_active_workspace_index();
-        const color = this._colors[active];
+        const color = this._activeColor();
 
         if (color)
             Main.panel.set_style(`background-color: ${color.css};`);
