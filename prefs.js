@@ -97,7 +97,7 @@ export default class WorkspacePeacockPreferences extends ExtensionPreferences {
         // The preview colors change at runtime, so they live in a stylesheet
         // regenerated on every sync rather than in fixed CSS classes.
         const styleProvider = new Gtk.CssProvider();
-        this._loadStyle(styleProvider, STYLE);
+        styleProvider.load_from_string(STYLE);
         this._colorProvider = new Gtk.CssProvider();
         const providers = [styleProvider, this._colorProvider];
         const display = Gdk.Display.get_default();
@@ -169,19 +169,23 @@ export default class WorkspacePeacockPreferences extends ExtensionPreferences {
             handlers.forEach(([settings, id]) => settings.disconnect(id));
             for (const provider of providers)
                 Gtk.StyleContext.remove_provider_for_display(display, provider);
+            // The shell keeps this object after the window closes: drop every
+            // reference to the window's objects so they can be collected.
+            this._window = null;
+            this._settings = null;
+            this._wmSettings = null;
+            this._mutterSettings = null;
+            this._rows = null;
+            this._colorProvider = null;
+            this._group = null;
+            this._removeButton = null;
+            this._addButton = null;
+            this._previewSizeGroup = null;
+            this._resetRow = null;
             return false;
         });
 
         this._sync();
-    }
-
-    _loadStyle(provider, css) {
-        // load_from_string() needs GTK 4.12; load_from_data() is deprecated
-        // from that version on.
-        if (provider.load_from_string)
-            provider.load_from_string(css);
-        else
-            provider.load_from_data(css, -1);
     }
 
     _getDefaultColor(index) {
@@ -254,7 +258,7 @@ export default class WorkspacePeacockPreferences extends ExtensionPreferences {
             row.title = hex ?? 'Theme color';
             row.subtitle = lowContrast ? 'Too light for the white text' : '';
         });
-        this._loadStyle(this._colorProvider, css.join('\n'));
+        this._colorProvider.load_from_string(css.join('\n'));
 
         const dynamic = this._isDynamic();
         this._group.description = 'The top bar takes the color of the workspace you are on. ' +
@@ -359,7 +363,6 @@ export default class WorkspacePeacockPreferences extends ExtensionPreferences {
     }
 
     _chooseColor(index) {
-        // Start from the current color, or else from this position's default.
         const initial = parseColor(this._settings.get_strv(KEY)[index]) ??
             parseColor(this._getDefaultColor(index));
         const dialog = new Gtk.ColorDialog({
@@ -372,8 +375,8 @@ export default class WorkspacePeacockPreferences extends ExtensionPreferences {
                 rgba = dialog.choose_rgba_finish(result);
             } catch (e) {
                 // Closing the dialog is not an error; anything else is.
-                if (!e.matches?.(Gtk.DialogError, Gtk.DialogError.DISMISSED) &&
-                    !e.matches?.(Gtk.DialogError, Gtk.DialogError.CANCELLED))
+                if (!e.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED) &&
+                    !e.matches(Gtk.DialogError, Gtk.DialogError.CANCELLED))
                     console.error(e);
                 return;
             }

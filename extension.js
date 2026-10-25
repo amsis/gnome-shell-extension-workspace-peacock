@@ -49,7 +49,6 @@ function dotShade({red, green, blue}) {
     if (saturation >= GRAY_SATURATION)
         saturation = Math.max(saturation, DOT_MIN_SATURATION);
 
-    // HSL -> RGB at the dot lightness.
     const a = saturation * Math.min(DOT_LIGHTNESS, 1 - DOT_LIGHTNESS);
     const channel = n => {
         const k = (n + hue * 2) % 12;
@@ -62,13 +61,13 @@ export default class WorkspacePeacockExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
         this._originalStyle = Main.panel.get_style();
-        // The workspace dots inside the Activities button. Not public API: if
-        // the shell lays them out differently, only the bar gets colored.
-        this._indicators = Main.panel.statusArea.activities?.get_first_child() ?? null;
-        // The workspace thumbnails of the overview, also not public API. The
-        // shell creates them when the overview opens and destroys them when
-        // it closes, so they are colored as they are added.
-        this._thumbnailsBox = Main.overview._overview?._controls?._thumbnailsBox ?? null;
+        // Neither is public API, but both sit at these paths in every version
+        // from 45 to 50: the workspace dots are the Activities button's first
+        // child, the thumbnails live in the overview controls. The shell
+        // creates the thumbnails when the overview opens and destroys them
+        // when it closes, so they are colored as they are added.
+        this._indicators = Main.panel.statusArea.activities.get_first_child();
+        this._thumbnailsBox = Main.overview._overview._controls._thumbnailsBox;
 
         this._loadColors();
         this._settings.connectObject(
@@ -90,13 +89,14 @@ export default class WorkspacePeacockExtension extends Extension {
             if (Main.panel.get_style() === null && this._activeColor())
                 this._applyColor();
         }, this);
-        // A new workspace gets a new, uncolored dot.
-        this._indicators?.connectObject(
+        // A new workspace gets a new, uncolored dot. Another extension may
+        // rebuild the Activities button or the overview: the references are
+        // then dropped, which is why they are used with ?. from here on.
+        this._indicators.connectObject(
             childAddedSignal(this._indicators), () => this._applyColor(),
-            // Another extension may rebuild the Activities button.
             'destroy', () => (this._indicators = null),
             this);
-        this._thumbnailsBox?.connectObject(
+        this._thumbnailsBox.connectObject(
             childAddedSignal(this._thumbnailsBox), () => this._applyColor(),
             'destroy', () => (this._thumbnailsBox = null),
             this);
@@ -112,8 +112,7 @@ export default class WorkspacePeacockExtension extends Extension {
         this._injections = new InjectionManager();
         this._injections.overrideMethod(popupPrototype, redisplay, original => function (...args) {
             original.apply(this, args);
-            if (this._list)
-                extension._colorSwitcherDots(this._list);
+            extension._colorSwitcherDots(this._list);
         });
     }
 
@@ -143,7 +142,7 @@ export default class WorkspacePeacockExtension extends Extension {
         return (this._indicators?.get_children() ?? [])
             .filter(child => !child.destroying)
             .map(child => child.get_first_child())
-            .filter(dot => dot?.has_style_class_name('workspace-dot'));
+            .filter(dot => dot.has_style_class_name('workspace-dot'));
     }
 
     _getThumbnails() {
